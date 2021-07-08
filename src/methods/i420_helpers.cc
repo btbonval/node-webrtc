@@ -24,6 +24,10 @@ Validation<RgbaImageData> ImageData::toRgba() const {
   return RgbaImageData::Create(*this);
 }
 
+Validation<YUY2ImageData> ImageData::toYUY2() const {
+  return YUY2ImageData::Create(*this);
+}
+
 Validation<I420ImageData> I420ImageData::Create(ImageData imageData) {
   auto expectedByteLength = static_cast<size_t>(imageData.width * imageData.height * 1.5);
   auto actualByteLength = imageData.contents.ByteLength();
@@ -34,6 +38,18 @@ Validation<I420ImageData> I420ImageData::Create(ImageData imageData) {
   }
   I420ImageData i420ImageData(imageData);
   return Pure(i420ImageData);
+}
+
+Validation<YUY2ImageData> YUY2ImageData::Create(ImageData imageData) {
+  auto expectedByteLength = static_cast<size_t>(imageData.width * imageData.height * 2);  // NOLINT
+  auto actualByteLength = imageData.contents.ByteLength();
+  if (actualByteLength != expectedByteLength) {
+    auto error = "Expected a .byteLength of " + std::to_string(expectedByteLength) + ", not " +
+        std::to_string(actualByteLength);
+    return Validation<YUY2ImageData>::Invalid(error);
+  }
+  YUY2ImageData yuy2ImageData(imageData);
+  return Pure(yuy2ImageData);
 }
 
 Validation<RgbaImageData> RgbaImageData::Create(ImageData imageData) {
@@ -75,6 +91,33 @@ Napi::Value I420Helpers::RgbaToI420(const Napi::CallbackInfo& info) {
   return info.Env().Undefined();
 }
 
+Napi::Value I420Helpers::YUY2ToI420(const Napi::CallbackInfo& info) {
+  CONVERT_ARGS_OR_THROW_AND_RETURN_NAPI(info, pair, std::tuple<YUY2ImageData COMMA I420ImageData>)
+
+  YUY2ImageData yuy2Frame = std::get<0>(pair);
+  I420ImageData i420Frame = std::get<1>(pair);
+
+  if (yuy2Frame.width() != i420Frame.width() || yuy2Frame.height() != i420Frame.height()) {
+    Napi::TypeError::New(info.Env(), "Dimensions must match").ThrowAsJavaScriptException();
+    return info.Env().Undefined();
+  }
+
+  libyuv::YUY2ToI420(
+      yuy2Frame.dataYUY2(),
+      yuy2Frame.strideYUY2(),
+      i420Frame.dataY(),
+      i420Frame.strideY(),
+      i420Frame.dataU(),
+      i420Frame.strideU(),
+      i420Frame.dataV(),
+      i420Frame.strideV(),
+      yuy2Frame.width(),
+      yuy2Frame.height()
+  );
+
+  return info.Env().Undefined();
+}
+
 Napi::Value I420Helpers::I420ToRgba(const Napi::CallbackInfo& info) {
   CONVERT_ARGS_OR_THROW_AND_RETURN_NAPI(info, pair, std::tuple<I420ImageData COMMA RgbaImageData>)
 
@@ -104,6 +147,7 @@ Napi::Value I420Helpers::I420ToRgba(const Napi::CallbackInfo& info) {
 
 void I420Helpers::Init(Napi::Env env, Napi::Object exports) {
   exports.Set("rgbaToI420", Napi::Function::New(env, RgbaToI420));
+  exports.Set("yuy2ToI420", Napi::Function::New(env, YUY2ToI420));
   exports.Set("i420ToRgba", Napi::Function::New(env, I420ToRgba));
 }
 

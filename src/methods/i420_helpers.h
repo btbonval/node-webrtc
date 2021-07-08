@@ -18,6 +18,7 @@ class I420Helpers {
  private:
   static Napi::Value I420ToRgba(const Napi::CallbackInfo&);
   static Napi::Value RgbaToI420(const Napi::CallbackInfo&);
+  static Napi::Value YUY2ToI420(const Napi::CallbackInfo&);
 };
 
 }  // namespace node_webrtc

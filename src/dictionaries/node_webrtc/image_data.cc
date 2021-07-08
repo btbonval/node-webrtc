@@ -35,4 +35,11 @@ CONVERTER_IMPL(ImageData, RgbaImageData, imageData) {
 
 CONVERT_VIA(Napi::Value, ImageData, RgbaImageData)
 
+DECLARE_CONVERTER(ImageData, YUY2ImageData)
+CONVERTER_IMPL(ImageData, YUY2ImageData, imageData) {
+  return imageData.toYUY2();
+}
+
+CONVERT_VIA(Napi::Value, ImageData, YUY2ImageData)
+
 }  // namespace node_webrtc
